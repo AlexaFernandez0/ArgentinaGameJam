@@ -1,6 +1,9 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
 
-public enum GameState { Playing, Won, Lost }
+public enum TurnState { PlayerTurn, EnemyTurn, Busy, Won, Lost }
+public enum ActionType { Move, Attack }
 
 public class GameManager : MonoBehaviour
 {
@@ -9,14 +12,20 @@ public class GameManager : MonoBehaviour
     [Header("Rules")]
     public int maxHeat = 100;
     public int startingHeat = 0;
-    public int startingMoves = 12;
+
+    [Header("Actions")]
+    public int actionsPerTurn = 3;
+    public int actionsLeft { get; private set; }
+    public int attackHeatCost = 10;
+    public int attackDamage = 1;
+
+    [Header("Burn Rule")]
     public int maxConsecutiveBurnTiles = 2;
+    public int consecutiveBurnCount { get; private set; }
 
     [Header("Runtime")]
-    public GameState state { get; private set; } = GameState.Playing;
+    public TurnState state { get; private set; } = TurnState.PlayerTurn;
     public int heat { get; private set; }
-    public int movesLeft { get; private set; }
-    public int consecutiveBurnCount { get; private set; }
 
     [Header("Win/Lose")]
     public Tile startTile;
@@ -24,6 +33,10 @@ public class GameManager : MonoBehaviour
 
     [Header("Refs")]
     public PlayerController player;
+    public InputManager inputManager;
+
+    [Header("Enemies")]
+    public List<EnemyUnit> enemies = new();
 
     private void Awake()
     {
@@ -32,28 +45,108 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
+        enemies.Clear();
+        enemies.AddRange(FindObjectsByType<EnemyUnit>(FindObjectsSortMode.None));
+
         ResetRun();
     }
 
     public void ResetRun()
     {
-        state = GameState.Playing;
+        state = TurnState.PlayerTurn;
         heat = startingHeat;
-        movesLeft = startingMoves;
         consecutiveBurnCount = 0;
 
         if (player && startTile)
             player.SnapToTile(startTile);
+
+        StartPlayerTurn();
     }
+
+    // ---------------- TURN FLOW ----------------
+
+    public void StartPlayerTurn()
+    {
+        if (state == TurnState.Won || state == TurnState.Lost) return;
+
+        state = TurnState.PlayerTurn;
+        actionsLeft = actionsPerTurn;
+
+        // Enable input
+        if (inputManager) inputManager.enabled = true;
+
+        Debug.Log($"Player Turn started. Actions: {actionsLeft}");
+    }
+
+    public void EndPlayerTurn()
+    {
+        if (state != TurnState.PlayerTurn) return;
+
+        Debug.Log("Player Turn ended.");
+
+        StartCoroutine(EnemyTurnRoutine());
+    }
+
+    private IEnumerator EnemyTurnRoutine()
+    {
+        state = TurnState.EnemyTurn;
+
+        // Disable input during enemy turn
+        if (inputManager) inputManager.enabled = false;
+
+        Debug.Log("Enemy Turn started.");
+
+        // MVP: enemies do nothing or move 1 step (later)
+        foreach (var e in enemies)
+        {
+            if (e == null || e.IsDead) continue;
+
+            // Option A (day 1): do nothing
+            // yield return null;
+
+            // Option B (day 2): move 1 step (you implement in EnemyUnit)
+            yield return e.TakeTurnCoroutine();
+        }
+
+        Debug.Log("Enemy Turn ended.");
+
+        StartPlayerTurn();
+    }
+
+    // ---------------- ACTIONS ----------------
+
+    public bool CanSpendAction()
+        => state == TurnState.PlayerTurn && actionsLeft > 0;
+
+    public void ConsumeAction(ActionType actionType, int heatDelta)
+    {
+        if (!CanSpendAction()) return;
+
+        actionsLeft--;
+        heat = Mathf.Clamp(heat + heatDelta, 0, maxHeat);
+
+        Debug.Log($"Action consumed: {actionType}. Actions left: {actionsLeft}. Heat delta: {heatDelta}. Heat: {heat}");
+
+        if (CheckWinLoseAfterHeat()) return;
+
+        if (actionsLeft <= 0)
+            EndPlayerTurn();
+    }
+
+    // ---------------- MOVEMENT RULES ----------------
 
     public bool CanEnterTile(Tile tile)
     {
-        if (state != GameState.Playing) return false;
+        if (state != TurnState.PlayerTurn) return false;
         if (tile == null) return false;
         if (!tile.IsWalkable) return false;
-        if (movesLeft <= 0) return false;
+        if (actionsLeft <= 0) return false;
 
-        // Regla Burn: no más de N seguidas
+        // Enemy occupancy check
+        if (IsTileOccupiedByEnemy(tile))
+            return false;
+
+        // Burn streak cap
         if (tile.type == TileType.Burn && consecutiveBurnCount >= maxConsecutiveBurnTiles)
             return false;
 
@@ -62,58 +155,125 @@ public class GameManager : MonoBehaviour
 
     public void OnPlayerEnteredTile(Tile tile)
     {
-        if (state != GameState.Playing) return;
+        if (state != TurnState.PlayerTurn) return;
 
-        Debug.Log($"Player entered tile: {tile.type} | GridPos: {tile.gridPos}");
-
-        movesLeft--;
-
-        // Burn streak
+        // Burn streak update
         if (tile.type == TileType.Burn) consecutiveBurnCount++;
         else consecutiveBurnCount = 0;
 
-        // Heat change
-        heat = Mathf.Clamp(heat + tile.heatDeltaOnEnter, 0, maxHeat);
+        // Apply tile heat (movement action consumes action + heat)
+        // NOTE: tile.heatDeltaOnEnter should represent the movement heat effect for that tile.
+        ConsumeAction(ActionType.Move, tile.heatDeltaOnEnter);
 
-        // Consumibles
+        // Consumables
         if (tile.type == TileType.Shade || tile.type == TileType.Drink)
             tile.ConsumeIfNeeded();
 
-        // Win / Lose
+        // Win check on entering tile
+        if (tile == goalTile && state != TurnState.Lost)
+        {
+            Win("Goal reached.");
+            return;
+        }
+    }
+
+    // ---------------- ATTACK RULES ----------------
+    public bool CanAttackEnemyOnTile(Tile targetTile)
+    {
+        if (state != TurnState.PlayerTurn) return false;
+        if (actionsLeft <= 0) return false;
+        if (player == null || player.currentTile == null) return false;
+
+        var enemy = GetEnemyOnTile(targetTile);
+        if (enemy == null) return false;
+
+        // Must be adjacent (no diagonals)
+        if (!BoardManager.Instance.AreAdjacent(player.currentTile.gridPos, targetTile.gridPos))
+            return false;
+
+        return true;
+    }
+
+    public EnemyUnit GetEnemyOnTile(Tile tile)
+    {
+        if (tile == null) return null;
+
+        foreach (var enemy in enemies)
+        {
+            if (enemy == null || enemy.IsDead) continue;
+            if (enemy.currentTile == tile) return enemy;
+        }
+        return null;
+    }
+
+    public void AttackEnemyOnTile(Tile targetTile)
+    {
+        if (!CanAttackEnemyOnTile(targetTile))
+        {
+            Debug.Log("Attack not possible.");
+            return;
+        }
+
+        var enemy = GetEnemyOnTile(targetTile);
+        if (enemy == null)
+        {
+            Debug.Log("No enemy found on target tile.");
+            return;
+        }
+
+        Debug.Log($"Attacking enemy on tile {targetTile.gridPos}.");
+
+        enemy.TakeDamage(attackDamage);
+
+        // Consume 1 action + add heat
+        ConsumeAction(ActionType.Attack, attackHeatCost);
+    }
+
+    // ---------------- ENEMIES / ATTACK ----------------
+
+    public bool IsTileOccupiedByEnemy(Tile tile)
+    {
+        foreach (var e in enemies)
+        {
+            if (e == null || e.IsDead) continue;
+            if (e.currentTile == tile) return true;
+        }
+        return false;
+    }
+
+    public void RemoveEnemy(EnemyUnit enemy)
+    {
+        // safe cleanup
+        enemies.Remove(enemy);
+    }
+
+    // ---------------- WIN / LOSE ----------------
+
+    private bool CheckWinLoseAfterHeat()
+    {
         if (heat >= maxHeat)
         {
-            Lose("You´ve got Burnout");
-            return;
+            Lose("Heat limit reached. Game Over.");
+            return true;
         }
-
-        if (tile == goalTile)
-        {
-            Win("You´ve arrived");
-            return;
-        }
-
-        if (movesLeft <= 0)
-        {
-            Lose("No more movements left");
-            return;
-        }
+        return false;
     }
 
     private void Win(string msg)
     {
-        state = GameState.Won;
-        Debug.Log("You have won!");
+        state = TurnState.Won;
+        if (inputManager) inputManager.enabled = false;
+
+        Debug.Log(msg);
     }
 
     private void Lose(string msg)
     {
-        state = GameState.Lost;
-        Debug.Log("You have lost!");
-    }
+        state = TurnState.Lost;
+        if (inputManager) inputManager.enabled = false;
 
-    public void ShowBlocked(string msg)
-    {
         Debug.Log(msg);
     }
 }
+
 

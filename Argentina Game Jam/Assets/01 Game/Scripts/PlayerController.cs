@@ -25,7 +25,7 @@ public class PlayerController : MonoBehaviour
 
         if (!BoardManager.Instance.AreAdjacent(currentTile.gridPos, target.gridPos))
         {
-            GameManager.Instance.ShowBlocked("Not Allowed. Just adjacents Tiles (No diagonals)");
+            Debug.Log("Not Allowed. Just adjacents Tiles (No diagonals)");
             return;
         }
 
@@ -33,11 +33,11 @@ public class PlayerController : MonoBehaviour
         {
             // Mensajes específicos para Burn cap
             if (target.type == TileType.Burn)
-                GameManager.Instance.ShowBlocked("No puedes pisar tantas rojas seguidas.");
+                Debug.Log("No puedes pisar tantas rojas seguidas.");
             else if (!target.IsWalkable)
-                GameManager.Instance.ShowBlocked("Bloqueado.");
+                Debug.Log("Bloqueado.");
             else
-                GameManager.Instance.ShowBlocked("No puedes moverte ahí por otra razón.");
+                Debug.Log("No puedes moverte ahí por otra razón.");
             return;
         }
 
