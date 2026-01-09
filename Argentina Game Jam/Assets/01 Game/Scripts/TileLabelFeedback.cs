@@ -65,6 +65,8 @@ public class TileLabelFeedback : MonoBehaviour
             return;
         }
 
+
+
         // ✨ NUEVA LÓGICA: Actualizar rango de movimiento
         UpdateMovementRange();
 
@@ -78,7 +80,14 @@ public class TileLabelFeedback : MonoBehaviour
             return;
         }
 
-        if (!hit.collider.TryGetComponent<Tile>(out var tile))
+        if (!hit.collider.TryGetComponent<Tile>(out var tile) || BoardManager.Instance == null)
+        {
+            ClearHover();
+            return;
+        }
+
+        // ¿Ese tile pertenece al board activo?
+        if (BoardManager.Instance.GetTile(tile.gridPos) != tile)
         {
             ClearHover();
             return;

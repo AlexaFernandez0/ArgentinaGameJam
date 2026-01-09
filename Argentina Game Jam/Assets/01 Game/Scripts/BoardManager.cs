@@ -11,6 +11,11 @@ public class BoardManager : MonoBehaviour
     public Transform gridOrigin;
     public float cellSize = 1f;
 
+    [Header("Runtime")]
+    [SerializeField] private Transform activeLevelRoot; // debug/inspector
+
+    public int TileCount => _tiles.Count;
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -20,18 +25,33 @@ public class BoardManager : MonoBehaviour
             return;
         }
         Instance = this;
-
-        Tile[] tiles = GetComponentsInChildren<Tile>(true);
-
-        AutoGridPositionsInTiles(tiles);
-        RegisterAllTilesInDictionary(tiles);
     }
 
-    private void RegisterAllTilesInDictionary(Tile[] tiles)
+    // ------------------- NEW KEY METHOD -------------------
+    public void BuildFromLevelRoot(Transform levelRoot)
+    {
+        if (levelRoot == null)
+        {
+            Debug.LogError("BuildFromLevelRoot: levelRoot is null.");
+            return;
+        }
+
+        // 1) Auto gridPos ONLY inside this level
+        AutoGridPositionsInTiles(levelRoot);
+
+        // 2) Register ONLY tiles inside this level
+        RegisterTilesInDictionary(levelRoot);
+
+        Debug.Log($"BuildFromLevelRoot: Registered {_tiles.Count} tiles from '{levelRoot.name}'.");
+    }
+
+    // ------------------- INTERNALS -------------------
+    private void RegisterTilesInDictionary(Transform root)
     {
         _tiles.Clear();
 
-        foreach (Tile t in tiles)
+        var tiles = root.GetComponentsInChildren<Tile>(true);
+        foreach (var t in tiles)
         {
             if (_tiles.ContainsKey(t.gridPos))
             {
@@ -42,7 +62,7 @@ public class BoardManager : MonoBehaviour
         }
     }
 
-    private void AutoGridPositionsInTiles(Tile[] tiles)
+    private void AutoGridPositionsInTiles(Transform root)
     {
         if (gridOrigin == null)
         {
@@ -50,29 +70,22 @@ public class BoardManager : MonoBehaviour
             return;
         }
 
-        if (cellSize <= 0f)
-        {
-            Debug.LogWarning("Cell size must be > 0. Auto gridPos skipped.");
-            return;
-        }
+        var tiles = root.GetComponentsInChildren<Tile>(true);
+        Vector3 o = gridOrigin.position;
 
-        foreach (Tile t in tiles)
+        for (int i = 0; i < tiles.Length; i++)
         {
+            var t = tiles[i];
             Vector3 p = t.transform.position;
-            Vector3 o = gridOrigin.position;
 
-            float fx = (p.x - o.x) / cellSize;
-            float fy = (p.z - o.z) / cellSize;
-
-            int gx = Mathf.RoundToInt(fx);
-            int gy = Mathf.RoundToInt(fy);
+            int gx = Mathf.RoundToInt((p.x - o.x) / cellSize);
+            int gy = Mathf.RoundToInt((p.z - o.z) / cellSize);
 
             t.gridPos = new Vector2Int(gx, gy);
         }
-
-        Debug.Log($"Auto-assigned gridPos for {tiles.Length} tiles.");
     }
 
+    // ------------------- API -------------------
     public Tile GetTile(Vector2Int pos)
         => _tiles.TryGetValue(pos, out var t) ? t : null;
 
@@ -80,16 +93,14 @@ public class BoardManager : MonoBehaviour
     {
         int dx = Mathf.Abs(a.x - b.x);
         int dy = Mathf.Abs(a.y - b.y);
-        return (dx + dy) == 1; // Without diagonals
+        return (dx + dy) == 1;
     }
 
     public bool AreAdjacent8D(Vector2Int a, Vector2Int b)
     {
         int dx = Mathf.Abs(a.x - b.x);
         int dy = Mathf.Abs(a.y - b.y);
-
-        // Adjacent in 8 directions means with diagonals
-        return (dx <= 1 && dy <= 1) && !(dx == 0 && dy == 0);
+        if (dx == 0 && dy == 0) return false;
+        return dx <= 1 && dy <= 1;
     }
-
 }

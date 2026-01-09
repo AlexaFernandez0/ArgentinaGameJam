@@ -47,7 +47,7 @@ public class UILosePanel : MonoBehaviour
 
         if (GameManager.Instance != null)
         {
-            GameManager.Instance.ResetRun();
+            GameManager.Instance.RetryLevel();
         }
         else
         {

@@ -41,8 +41,14 @@ public class GameManager : MonoBehaviour
 
     [Header("Enemies")]
     public List<EnemyUnit> enemies = new();
-
     private List<EnemyInitialData> _enemyInitialData = new();
+
+    /*[Header("Levels")]
+    [SerializeField] private List<LevelDefinition> levels = new();
+    [SerializeField] private int startingLevelIndex = 0;
+    public int CurrentLevelIndex => currentLevelIndex;
+    private int currentLevelIndex;*/
+
 
     // -------- Events ------------
     public event Action<TurnState> TurnStateChanged;
@@ -56,6 +62,8 @@ public class GameManager : MonoBehaviour
     private void RaiseTurnStateChanged() => TurnStateChanged?.Invoke(state);
     private void RaiseHeatChanged() => HeatChanged?.Invoke(heat, maxHeat);
     private void RaiseActionsChanged() => ActionsChanged?.Invoke(actionsLeft, actionsPerTurn);
+    public void RebuildEnemyInitialData() => SaveEnemyInitialData();
+
 
     private void Awake()
     {
@@ -104,18 +112,49 @@ public class GameManager : MonoBehaviour
 
         ResetEnemies();
 
-        if (player != null)
-        {
-            if (startTile)
-                player.SnapToTile(startTile);
-
-            var animController = player.GetComponent<PlayerAnimationController>();
-            animController?.ResetToIdle();
-        }
+        if (player != null && startTile != null)
+            player.SnapToTile(startTile);
 
         GameReset?.Invoke();
         StartPlayerTurn();
     }
+
+
+    public void RetryLevel()
+    {
+        // Avoid retrying if we are mid-transition or already in a stable playing state.
+        if (state == TurnState.Busy) return;
+
+        Debug.Log("🔁 RETRY LEVEL");
+
+        // Reset run state (rules/runtime) but keep currentLevelIndex
+        state = TurnState.PlayerTurn;
+        heat = startingHeat;
+        consecutiveBurnCount = 0;
+        actionsLeft = actionsPerTurn;
+
+        // Rebuild the active level (this should call BuildFromLevelRoot inside)
+        // SetActiveLevel(currentLevelIndex);
+
+        // Reset enemies (spawn/pos/hp) AFTER the level is set (so tiles dictionary is correct)
+        ResetEnemies();
+
+        // Re-snap player to the level start tile
+        if (player != null && startTile != null)
+            player.SnapToTile(startTile);
+
+        // Notify UI
+        RaiseTurnStateChanged();
+        RaiseHeatChanged();
+        RaiseActionsChanged();
+        GameReset?.Invoke();
+
+        // Enable input again
+        if (inputManager) inputManager.enabled = true;
+
+        Debug.Log("✅ RETRY COMPLETE");
+    }
+
 
     private void ResetEnemies()
     {
@@ -255,6 +294,117 @@ public class GameManager : MonoBehaviour
 
         StartPlayerTurn();
     }
+    // ---------------- LEVEL TRANSITION ----------------
+    public void SetBusy(bool isBusy)
+    {
+        if (state == TurnState.Won || state == TurnState.Lost) return;
+
+        if (isBusy)
+        {
+            state = TurnState.Busy;
+            if (inputManager) inputManager.enabled = false;
+            TurnStateChanged?.Invoke(state);
+        }
+        else
+        {
+            // Volvemos a PlayerTurn por defecto (jam-safe)
+            StartPlayerTurn();
+        }
+    }
+
+    public void SetupFromLevel(LevelDefinition level)
+    {
+        if (level == null)
+        {
+            Debug.LogError("SetupFromLevel: level is null.");
+            return;
+        }
+
+        // refs del nivel
+        startTile = level.startTile;
+        goalTile = level.goalTile;
+
+        // enemies del nivel
+        enemies.Clear();
+        enemies.AddRange(level.enemies); // o level.enemies si lo guardas
+
+        SaveEnemyInitialData();  // usa enemies ya cargados
+
+        ResetRun();      // importante: reset SIN SetActiveLevel
+    }
+
+    public void LoadLevel(LevelDefinition level)
+    {
+        if (level == null)
+        {
+            Debug.LogError("[GameManager] LoadLevel: level is null.");
+            return;
+        }
+
+        // 1) References
+        startTile = level.startTile;
+        goalTile = level.goalTile;
+
+        // 2) Rebuild board scope (solo ve tiles de este level root)
+        if (BoardManager.Instance != null)
+            BoardManager.Instance.BuildFromLevelRoot(level.transform);
+
+        // 3) Enemies list comes from the level
+        enemies.Clear();
+        enemies.AddRange(level.enemies);
+
+        // 4) Save initial data (para retry)
+        SaveEnemyInitialData();
+
+        // 5) Reset run (snap player/enemies)
+        ResetRun();
+    }
+
+
+    /* private void SetActiveLevel(int index)
+    {
+        if (levels == null || levels.Count == 0)
+        {
+            Debug.LogError("SetActiveLevel: Levels list is empty.");
+            return;
+        }
+
+        index = Mathf.Clamp(index, 0, levels.Count - 1);
+        currentLevelIndex = index;
+
+        SetActiveLevel(levels[currentLevelIndex]);
+    }
+
+    public void SetActiveLevel(LevelDefinition level)
+    {
+        if (level == null)
+        {
+            Debug.LogError("SetActiveLevel: level is null.");
+            return;
+        }
+
+        // 1) Activate only this level
+        for (int i = 0; i < levels.Count; i++)
+            if (levels[i] != null)
+                levels[i].gameObject.SetActive(levels[i] == level);
+
+        // 2) Assign start/goal
+        startTile = level.startTile;
+        goalTile = level.goalTile;
+
+        // 3) Rebuild board dictionary ONLY with this level tiles
+        BoardManager.Instance.BuildFromLevelRoot(level.transform);
+
+        // 4) Rebuild enemy list ONLY with this level enemies
+        enemies.Clear();
+        enemies.AddRange(level.GetComponentsInChildren<EnemyUnit>(true));
+
+        Debug.Log($"Active level: {level.name} | Board rebuilt. Tiles registered: {BoardManager.Instance.TileCount} | New Enemies register: {enemies.Count} enemies");
+
+        Debug.Log($"Board rebuilt. Tiles registered: {BoardManager.Instance.TileCount}");
+    } */
+
+
 
     // ---------------- ACTIONS ----------------
 
@@ -476,12 +626,14 @@ public class GameManager : MonoBehaviour
 
     private void Win(string msg)
     {
-        state = TurnState.Won;
+        /* state = TurnState.Won;
 
         RaiseTurnStateChanged();
-        GameWon?.Invoke(msg);
+        GameWon?.Invoke(msg);*/
 
         if (inputManager) inputManager.enabled = false;
+
+        LevelTransitionManager.Instance.TransitionToNextLevel();
 
         Debug.Log($"Victory: {msg}");
     }
