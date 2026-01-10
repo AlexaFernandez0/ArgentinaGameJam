@@ -433,7 +433,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Tile
   gridPos: {x: 0, y: 0}
   type: 0
-  heatDeltaOnEnter: 5
+  heatDeltaOnEnter: 0
   oneShot: 0
   oneShotVisual: {fileID: 0}
 --- !u!1001 &2317020615029368898

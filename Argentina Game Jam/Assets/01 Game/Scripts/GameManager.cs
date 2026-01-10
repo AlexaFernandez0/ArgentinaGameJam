@@ -237,15 +237,6 @@ public class GameManager : MonoBehaviour
 
         if (inputManager) inputManager.enabled = false;
 
-        // Incrementar contador de turnos ANTES de procesar enemigos
-        for (int i = 0; i < enemies.Count; i++)
-        {
-            if (enemies[i] != null && !enemies[i].IsDead)
-            {
-                enemies[i].turnCounter++;
-            }
-        }
-
         // Count alive enemies
         int aliveCount = 0;
         for (int i = 0; i < enemies.Count; i++)
@@ -274,8 +265,7 @@ public class GameManager : MonoBehaviour
             processedCount++;
             Debug.Log($"┌─────────────────────────────────────┐");
             Debug.Log($"│ Enemy {processedCount}/{aliveCount}: {enemy.name}");
-            Debug.Log($"│ Turn frequency: every {enemy.turnFrequency} turn(s)");
-            Debug.Log($"│ Counter: {enemy.turnCounter}/{enemy.turnFrequency}");
+            Debug.Log($"│ Steps per Turn: {enemy.StepsPerTurn} step(s)");
             Debug.Log($"└─────────────────────────────────────┘");
 
             yield return enemy.TakeTurnCoroutine();

@@ -9,8 +9,7 @@ public class EnemyUnit : MonoBehaviour
 
     [Header("Turn Frequency")]
     [Tooltip("Cada cuántos turnos este enemigo toma acción (1 = cada turno, 2 = cada 2 turnos, etc.)")]
-    public int turnFrequency = 1;
-    [HideInInspector] public int turnCounter = 0; // Contador interno
+    public int StepsPerTurn = 1;
 
     [Header("Attack")]
     public int attackHeatDamage = 5;
@@ -89,7 +88,6 @@ public class EnemyUnit : MonoBehaviour
     {
         health = initialHealth;
         _isExecutingTurn = false;
-        turnCounter = 0; // Reset turn counter
 
         if (_visualMesh != null) _visualMesh.SetActive(true);
         else gameObject.SetActive(true);
@@ -99,121 +97,136 @@ public class EnemyUnit : MonoBehaviour
             _animController.ResetToIdle();
         }
 
-        DebugLog($"Enemy '{name}' reset with {health} HP. Turn frequency: {turnFrequency}");
+        DebugLog($"Enemy '{name}' reset with {health} HP. Turn frequency: {StepsPerTurn}");
     }
 
     public IEnumerator TakeTurnCoroutine()
-{
-    if (_isExecutingTurn)
     {
-        DebugLog("WARNING: Turn already executing. Aborting.");
-        yield break;
-    }
+        if (_isExecutingTurn)
+        {
+            DebugLog("WARNING: Turn already executing. Aborting.");
+            yield break;
+        }
 
-    if (IsDead)
-    {
-        DebugLog("INFO: Enemy is dead. Skipping turn.");
-        yield break;
-    }
+        if (IsDead)
+        {
+            DebugLog("INFO: Enemy is dead. Skipping turn.");
+            yield break;
+        }
 
-    // Sistema de frecuencia de turnos
-    if (turnCounter < turnFrequency)
-    {
-        DebugLog($"Turn counter: {turnCounter}/{turnFrequency} - Waiting for next turn.");
-        yield return new WaitForSeconds(0.15f);
-        yield break;
-    }
+        // NUEVA REGLA:
+        // 0 = no se mueve nunca
+        // 1 = 1 paso
+        // 2 = 2 pasos
+        int stepsThisTurn = Mathf.Max(0, StepsPerTurn);
 
-    // Reset counter when it's time to act
-    turnCounter = 0;
-    DebugLog($"=== TURN ACTIVE (frequency: every {turnFrequency} turn(s)) ===");
+        if (stepsThisTurn == 0)
+        {
+            DebugLog("TurnFrequency=0 -> enemy does NOT move this turn.");
+            yield return new WaitForSeconds(0.05f);
+            yield break;
+        }
 
-    if (currentTile == null)
-    {
-        DebugLog("ERROR: currentTile is NULL. Cannot take turn.");
-        yield break;
-    }
+        if (currentTile == null)
+        {
+            DebugLog("ERROR: currentTile is NULL. Cannot take turn.");
+            yield break;
+        }
 
-    var gm = GameManager.Instance;
-    if (gm == null)
-    {
-        DebugLog("ERROR: GameManager.Instance is NULL. Cannot take turn.");
-        yield break;
-    }
+        var gm = GameManager.Instance;
+        if (gm == null)
+        {
+            DebugLog("ERROR: GameManager.Instance is NULL. Cannot take turn.");
+            yield break;
+        }
 
-    var player = gm.player;
-    if (player == null || player.currentTile == null)
-    {
-        DebugLog("ERROR: Player or Player.currentTile is NULL. Cannot take turn.");
-        yield break;
-    }
+        var player = gm.player;
+        if (player == null || player.currentTile == null)
+        {
+            DebugLog("ERROR: Player or Player.currentTile is NULL. Cannot take turn.");
+            yield break;
+        }
 
-    if (_actions == null)
-    {
-        DebugLog("ERROR: EnemyActions component is missing. Cannot take turn.");
-        yield break;
-    }
+        if (_actions == null)
+        {
+            DebugLog("ERROR: EnemyActions component is missing. Cannot take turn.");
+            yield break;
+        }
 
-    _isExecutingTurn = true;
+        _isExecutingTurn = true;
 
-    Vector2Int myPos = currentTile.gridPos;
-    Vector2Int playerPos = player.currentTile.gridPos;
+        // Para evitar loops raros si algo falla
+        int executedSteps = 0;
 
-    // ✨ PRIORIDAD 1: ATACAR si está adyacente (4D - sin diagonales)
-    bool canAttack = false;
-    if (BoardManager.Instance != null)
-        canAttack = BoardManager.Instance.AreAdjacent4D(myPos, playerPos);
+        while (executedSteps < stepsThisTurn)
+        {
+            // Si ya no tenemos tile actual válida, abort
+            if (currentTile == null)
+            {
+                DebugLog("ERROR: currentTile became NULL mid-turn.");
+                break;
+            }
 
-    DebugLog($"Turn start. MyPos={myPos} PlayerPos={playerPos} CanAttack={canAttack}");
+            Vector2Int myPos = currentTile.gridPos;
+            Vector2Int playerPos = player.currentTile.gridPos;
 
-    if (canAttack)
-    {
-        DebugLog("⚔️ ATTACKING PLAYER!");
-        yield return _actions.AttackCoroutine();
-        
+            // Si ya está adyacente en 4D, NO atacamos.
+            // Puedes elegir: o se queda quieto, o intenta reposicionarse.
+            // Para tu idea de "tag al final del turno del jugador", lo más coherente es: se queda quieto.
+            if (BoardManager.Instance != null && BoardManager.Instance.AreAdjacent4D(myPos, playerPos))
+            {
+                DebugLog("Adjacent to player (4D) -> no attack. Staying still.");
+                break;
+            }
+
+            bool IsBlocked(Vector2Int pos)
+            {
+                Tile t = BoardManager.Instance.GetTile(pos);
+                return t != null && IsTileOccupiedByOtherEnemy(t);
+            }
+
+            if (AStarPathfinder.TryGetNextStepTowardPlayerAdj(
+                    start: myPos,
+                    playerPos: playerPos,
+                    isBlocked: IsBlocked,
+                    nextStep: out Vector2Int nextStep,
+                    pathLength: out int pathLen))
+            {
+                // Seguridad extra: nunca moverse al tile del player
+                if (nextStep == playerPos)
+                {
+                    DebugLog("Safety: nextStep equals playerPos. Aborting movement.");
+                    break;
+                }
+
+                Tile nextTile = BoardManager.Instance.GetTile(nextStep);
+                if (nextTile != null)
+                {
+                    DebugLog($"Step {executedSteps + 1}/{stepsThisTurn} -> Moving to {nextStep} (pathLen={pathLen})");
+                    yield return _actions.MoveToTileCoroutine(nextTile);
+                    executedSteps++;
+
+                    // mini pausa visual entre pasos si hace 2 pasos
+                    if (executedSteps < stepsThisTurn)
+                        yield return new WaitForSeconds(0.05f);
+                }
+                else
+                {
+                    DebugLog("ERROR: Next step tile resolved to NULL. Stopping.");
+                    break;
+                }
+            }
+            else
+            {
+                DebugLog("No valid A* move found. Stopping.");
+                break;
+            }
+        }
+
+        DebugLog($"Turn end. Steps executed: {executedSteps}/{stepsThisTurn}");
         _isExecutingTurn = false;
-        DebugLog("Turn end (after attack).");
-        yield break;
     }
 
-    // ✨ PRIORIDAD 2: MOVERSE (OBLIGATORIO si no puede atacar)
-    // El enemigo SIEMPRE intenta moverse hacia el jugador
-    bool IsBlocked(Vector2Int pos)
-    {
-        Tile t = BoardManager.Instance.GetTile(pos);
-        return t != null && IsTileOccupiedByOtherEnemy(t);
-    }
-
-    if (AStarPathfinder.TryGetNextStepTowardPlayerAdj(
-            start: myPos,
-            playerPos: playerPos,
-            isBlocked: IsBlocked,
-            nextStep: out Vector2Int nextStep,
-            pathLength: out int pathLen))
-    {
-        Tile nextTile = BoardManager.Instance.GetTile(nextStep);
-        if (nextTile != null)
-        {
-            DebugLog($"🏃 Moving to: {nextStep} (pathLen={pathLen})");
-            yield return _actions.MoveToTileCoroutine(nextTile);
-        }
-        else
-        {
-            DebugLog("ERROR: Next step tile resolved to NULL. Staying still.");
-            yield return new WaitForSeconds(0.15f);
-        }
-    }
-    else
-    {
-        // ✨ CAMBIO CRÍTICO: Si A* falla, esto NO debería pasar en un tablero bien diseñado
-        // pero mantener el log para debugging
-        DebugLog("⚠️ WARNING: No valid A* move found. This should not happen often!");
-        yield return new WaitForSeconds(0.15f);
-    }
-
-    DebugLog("Turn end.");
-    _isExecutingTurn = false;
-}
     private bool IsTileOccupiedByOtherEnemy(Tile tile)
     {
         var gm = GameManager.Instance;

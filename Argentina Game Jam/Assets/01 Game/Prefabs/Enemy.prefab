@@ -186,7 +186,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bb2e587c8c94b0149a17533c510d288a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyUnit
-  health: 2
+  health: 1
+  turnFrequency: 1
+  turnCounter: 0
   attackHeatDamage: 5
   attackEffectPrefab: {fileID: 0}
   attackEffectDuration: 5
