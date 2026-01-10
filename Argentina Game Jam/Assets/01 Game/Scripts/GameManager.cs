@@ -43,17 +43,12 @@ public class GameManager : MonoBehaviour
     public List<EnemyUnit> enemies = new();
     private List<EnemyInitialData> _enemyInitialData = new();
 
-    /*[Header("Levels")]
-    [SerializeField] private List<LevelDefinition> levels = new();
-    [SerializeField] private int startingLevelIndex = 0;
-    public int CurrentLevelIndex => currentLevelIndex;
-    private int currentLevelIndex;*/
-
 
     // -------- Events ------------
     public event Action<TurnState> TurnStateChanged;
     public event Action<int, int> HeatChanged;
     public event Action<int, int> ActionsChanged;
+    public event Action<string> LevelFinished;
     public event Action<string> GameLost;
     public event Action<string> GameWon;
     public event Action GameReset;
@@ -113,7 +108,10 @@ public class GameManager : MonoBehaviour
         ResetEnemies();
 
         if (player != null && startTile != null)
+        {
             player.SnapToTile(startTile);
+            player.GetComponent<PlayerAnimationController>()?.ResetToIdle();
+        }
 
         GameReset?.Invoke();
         StartPlayerTurn();
@@ -323,7 +321,7 @@ public class GameManager : MonoBehaviour
         ResetRun();      // importante: reset SIN SetActiveLevel
     }
 
-    public void LoadLevel(LevelDefinition level)
+    public void LoadLevel(LevelDefinition level, int heatToStart)
     {
         if (level == null)
         {
@@ -331,24 +329,28 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        // 1) References
+        // 👇 esto es la clave para retry/next
+        startingHeat = Mathf.Clamp(heatToStart, 0, maxHeat);
+
         startTile = level.startTile;
         goalTile = level.goalTile;
 
-        // 2) Rebuild board scope (solo ve tiles de este level root)
         if (BoardManager.Instance != null)
             BoardManager.Instance.BuildFromLevelRoot(level.transform);
 
-        // 3) Enemies list comes from the level
         enemies.Clear();
         enemies.AddRange(level.enemies);
 
-        // 4) Save initial data (para retry)
         SaveEnemyInitialData();
 
-        // 5) Reset run (snap player/enemies)
-        ResetRun();
+        ResetRun(); // <- cogerá startingHeat como heat inicial
     }
+
+    public void LoadLevel(LevelDefinition level)
+    {
+        LoadLevel(level, heat); // por defecto mantiene el heat actual
+    }
+
 
 
     /* private void SetActiveLevel(int index)
@@ -616,16 +618,25 @@ public class GameManager : MonoBehaviour
 
     private void Win(string msg)
     {
-        /* state = TurnState.Won;
+        state = TurnState.Won;
 
         RaiseTurnStateChanged();
-        GameWon?.Invoke(msg);*/
+        GameWon?.Invoke(msg);
 
         if (inputManager) inputManager.enabled = false;
 
-        LevelTransitionManager.Instance.TransitionToNextLevel();
-
         Debug.Log($"Victory: {msg}");
+    }
+
+    private void LevelFinish(string msg)
+    {
+        // Bloquea input y estado para que el jugador no siga moviendo
+        SetBusy(true);
+
+        // Dispara evento para que el LevelTransitionManager muestre el panel
+        LevelFinished?.Invoke(msg);
+
+        Debug.Log($"Level finished: {msg}");
     }
 
     private void Lose(string msg)

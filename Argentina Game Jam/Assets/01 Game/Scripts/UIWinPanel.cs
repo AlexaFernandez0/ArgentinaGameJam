@@ -31,30 +31,16 @@ public class UIWinPanel : MonoBehaviour
         gameObject.SetActive(false);
     }
 
-    // Conecta este método al OnClick del botón Retry
-    /* public void OnRetryPressed()
+    public void OnRetryPressed()
     {
-        Debug.Log("Retry pressed.");
-
         Hide();
+        LevelTransitionManager.Instance.RetryLevelFromPanel();
+    }
 
-        if (reloadSceneOnRetry)
-        {
-            var scene = SceneManager.GetActiveScene();
-            SceneManager.LoadScene(scene.buildIndex);
-            return;
-        }
-
-        if (GameManager.Instance != null)
-        {
-            GameManager.Instance.ResetRun();
-        }
-        else
-        {
-            Debug.LogWarning("GameManager.Instance is null. Reloading scene as fallback.");
-            var scene = SceneManager.GetActiveScene();
-            SceneManager.LoadScene(scene.buildIndex);
-        }
-    }*/
+    public void OnNextPressed()
+    {
+        Hide();
+        LevelTransitionManager.Instance.NextLevelFromPanel();
+    }
 }
 

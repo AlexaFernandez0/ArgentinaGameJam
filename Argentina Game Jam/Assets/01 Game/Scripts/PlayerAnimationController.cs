@@ -46,21 +46,33 @@ public class PlayerAnimationController : MonoBehaviour
         animator.SetTrigger(Die);
     }
 
-    // ✨ MÉTODO NUEVO - Asegúrate que esté aquí
+    // Reset total del Animator al reiniciar nivel
     public void ResetToIdle()
     {
         if (animator == null) return;
-        
-        // Resetear todos los triggers
+
+        // 0) Cortar cualquier cosa rara
+        animator.enabled = false;
+        animator.enabled = true;
+
+        // 1) Reset total del Animator
+        animator.Rebind();
+        animator.Update(0f);
+
+        // 2) Reset parámetros (triggers + bools típicos)
         animator.ResetTrigger(Attack);
         animator.ResetTrigger(Die);
-        
-        // Forzar isMoving a false
+
         animator.SetBool(IsMoving, false);
-        
-        // Reproducir el estado Idle directamente
+
+        // Si tienes algún bool tipo IsDead / Dead / Knocked / Stunned, ponlo a false aquí
+        // animator.SetBool(IsDead, false);
+
+        // 3) Forzar Idle
         animator.Play("Idle", 0, 0f);
-        
-        Debug.Log("Player animation reset to Idle.");
+        animator.Update(0f);
+
+        Debug.Log("✅ Player animation reset to Idle (NUCLEAR).");
     }
+
 }
