@@ -9,6 +9,12 @@ EditorBuildSettings:
     path: Assets/01 Game/Scenes/SampleScene.unity
     guid: 99c9720ab356a0642a771bea13969a05
   - enabled: 1
+    path: Assets/01 Game/Scenes/Home.unity
+    guid: aa4a4cc04b64f4e44a782c3685fb47ec
+  - enabled: 1
+    path: Assets/01 Game/Scenes/Prototype Pasus.unity
+    guid: e1b7fff4d69e41b438ffdd3b4ad8fb69
+  - enabled: 1
     path: Assets/01 Game/Scenes/Prototype.unity
     guid: b2c0e78099076ce4b8ff88f0f2bde77a
   m_configObjects:
