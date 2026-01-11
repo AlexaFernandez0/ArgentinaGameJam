@@ -8,9 +8,6 @@ public class UILosePanel : MonoBehaviour
     public TMP_Text titleText;
     public TMP_Text messageText;
 
-    [Header("Retry")]
-    public bool reloadSceneOnRetry = false;
-
     private void Awake()
     {
         Hide();
@@ -34,13 +31,6 @@ public class UILosePanel : MonoBehaviour
     public void OnRetryPressed()
     {
         Hide();
-
-        if (reloadSceneOnRetry)
-        {
-            var scene = SceneManager.GetActiveScene();
-            SceneManager.LoadScene(scene.buildIndex);
-            return;
-        }
 
         if (LevelTransitionManager.Instance != null)
         {
