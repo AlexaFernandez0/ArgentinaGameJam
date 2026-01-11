@@ -2,14 +2,11 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public class UIWinPanel : MonoBehaviour
+public class UILevelFinishedPanel : MonoBehaviour
 {
     [Header("UI")]
     public TMP_Text titleText;
     public TMP_Text messageText;
-
-    // [Header("Next Level")]
-    // public bool reloadSceneOnRetry = false;
 
     private void Awake()
     {
@@ -37,7 +34,7 @@ public class UIWinPanel : MonoBehaviour
         LevelTransitionManager.Instance.RetryLevelFromPanel();
     }
 
-    public void OnNextPressed()
+    public void OnNextLevelPressed()
     {
         Hide();
         LevelTransitionManager.Instance.NextLevelFromPanel();

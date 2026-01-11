@@ -7,7 +7,8 @@ public class UIManager : MonoBehaviour
     [Header("Refs")]
     public UIHud hud;
     public UILosePanel losePanel;
-    public UIWinPanel winPanel;
+    public UILevelFinishedPanel levelFinishedPanel;
+    public UIVictoryPanel victoryPanel;
 
 
     private void Awake()
@@ -39,25 +40,46 @@ public class UIManager : MonoBehaviour
         Unsubscribe();
     }
 
-    private void TrySubscribe()
+    private void TrySubscribeGameManager()
     {
         if (GameManager.Instance == null) return;
 
         // Avoid double subscription
-        Unsubscribe();
+        UnsubscribeGameManager();
 
         GameManager.Instance.TurnStateChanged += OnTurnStateChanged;
         GameManager.Instance.HeatChanged += OnHeatChanged;
         GameManager.Instance.ActionsChanged += OnActionsChanged;
         GameManager.Instance.GameLost += OnGameLost;
-        GameManager.Instance.GameWon += OnGameWon;
         GameManager.Instance.GameReset += OnGameReset;
 
-        // Force initial sync
         ForceRefreshFromGame();
     }
 
+    private void TrySubscribeLevelTransition()
+    {
+        if (LevelTransitionManager.Instance == null) return;
+
+        UnsubscribeLevelTransition();
+
+        LevelTransitionManager.Instance.LevelFinished += OnLevelFinished;
+        LevelTransitionManager.Instance.GameWon += OnGameWon;
+    }
+
+    private void TrySubscribe()
+    {
+        TrySubscribeGameManager();
+        TrySubscribeLevelTransition();
+    }
+
+
     private void Unsubscribe()
+    {
+        UnsubscribeGameManager();
+        UnsubscribeLevelTransition();
+    }
+
+    private void UnsubscribeGameManager()
     {
         if (GameManager.Instance == null) return;
 
@@ -65,8 +87,15 @@ public class UIManager : MonoBehaviour
         GameManager.Instance.HeatChanged -= OnHeatChanged;
         GameManager.Instance.ActionsChanged -= OnActionsChanged;
         GameManager.Instance.GameLost -= OnGameLost;
-        GameManager.Instance.GameWon -= OnGameWon;
         GameManager.Instance.GameReset -= OnGameReset;
+    }
+
+    private void UnsubscribeLevelTransition()
+    {
+        if (LevelTransitionManager.Instance == null) return;
+
+        LevelTransitionManager.Instance.LevelFinished -= OnLevelFinished;
+        LevelTransitionManager.Instance.GameWon -= OnGameWon;
     }
 
     private void ForceRefreshFromGame()
@@ -109,7 +138,8 @@ public class UIManager : MonoBehaviour
         Debug.Log("UI received GameReset.");
         ForceRefreshFromGame();
         losePanel?.Hide();
-        winPanel?.Hide();
+        levelFinishedPanel?.Hide();
+        victoryPanel?.Hide();
     }
 
     private void OnGameLost(string msg)
@@ -118,10 +148,16 @@ public class UIManager : MonoBehaviour
         losePanel?.Show(msg);
     }
 
+    private void OnLevelFinished(string msg)
+    {
+        Debug.Log($"UI received Level Finished: {msg}");
+        levelFinishedPanel?.Show(msg);
+    }
+
     private void OnGameWon(string msg)
     {
-        Debug.Log($"UI received GameWon: {msg}");
-        winPanel?.Show(msg);
+        Debug.Log($"UI received Game Won: {msg}");
+        victoryPanel?.Show(msg);
     }
 }
 

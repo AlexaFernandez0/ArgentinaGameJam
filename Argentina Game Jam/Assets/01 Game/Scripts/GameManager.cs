@@ -48,9 +48,8 @@ public class GameManager : MonoBehaviour
     public event Action<TurnState> TurnStateChanged;
     public event Action<int, int> HeatChanged;
     public event Action<int, int> ActionsChanged;
-    public event Action<string> LevelFinished;
+    public event Action<string> GoalReached;
     public event Action<string> GameLost;
-    public event Action<string> GameWon;
     public event Action GameReset;
 
     // -------- Helpers ----------
@@ -353,51 +352,6 @@ public class GameManager : MonoBehaviour
 
 
 
-    /* private void SetActiveLevel(int index)
-    {
-        if (levels == null || levels.Count == 0)
-        {
-            Debug.LogError("SetActiveLevel: Levels list is empty.");
-            return;
-        }
-
-        index = Mathf.Clamp(index, 0, levels.Count - 1);
-        currentLevelIndex = index;
-
-        SetActiveLevel(levels[currentLevelIndex]);
-    }
-
-    public void SetActiveLevel(LevelDefinition level)
-    {
-        if (level == null)
-        {
-            Debug.LogError("SetActiveLevel: level is null.");
-            return;
-        }
-
-        // 1) Activate only this level
-        for (int i = 0; i < levels.Count; i++)
-            if (levels[i] != null)
-                levels[i].gameObject.SetActive(levels[i] == level);
-
-        // 2) Assign start/goal
-        startTile = level.startTile;
-        goalTile = level.goalTile;
-
-        // 3) Rebuild board dictionary ONLY with this level tiles
-        BoardManager.Instance.BuildFromLevelRoot(level.transform);
-
-        // 4) Rebuild enemy list ONLY with this level enemies
-        enemies.Clear();
-        enemies.AddRange(level.GetComponentsInChildren<EnemyUnit>(true));
-
-        Debug.Log($"Active level: {level.name} | Board rebuilt. Tiles registered: {BoardManager.Instance.TileCount} | New Enemies register: {enemies.Count} enemies");
-
-        Debug.Log($"Board rebuilt. Tiles registered: {BoardManager.Instance.TileCount}");
-    } */
-
-
-
     // ---------------- ACTIONS ----------------
 
     public bool CanSpendAction()
@@ -481,10 +435,10 @@ public class GameManager : MonoBehaviour
         if (tile.type == TileType.Shade || tile.type == TileType.Drink)
             tile.ConsumeIfNeeded();
 
-        // Check win
+        // Goal Tile
         if (tile == goalTile && state != TurnState.Lost)
         {
-            Win("Goal reached.");
+            HandleGoalReached("Goal reached.");
             return;
         }
 
@@ -616,29 +570,6 @@ public class GameManager : MonoBehaviour
         return false;
     }
 
-    private void Win(string msg)
-    {
-        state = TurnState.Won;
-
-        RaiseTurnStateChanged();
-        GameWon?.Invoke(msg);
-
-        if (inputManager) inputManager.enabled = false;
-
-        Debug.Log($"Victory: {msg}");
-    }
-
-    private void LevelFinish(string msg)
-    {
-        // Bloquea input y estado para que el jugador no siga moviendo
-        SetBusy(true);
-
-        // Dispara evento para que el LevelTransitionManager muestre el panel
-        LevelFinished?.Invoke(msg);
-
-        Debug.Log($"Level finished: {msg}");
-    }
-
     private void Lose(string msg)
     {
         player.GetComponent<PlayerAnimationController>()?.PlayDeath();
@@ -652,6 +583,22 @@ public class GameManager : MonoBehaviour
 
         Debug.Log($"Defeat: {msg}");
     }
+
+    private void HandleGoalReached(string msg)
+    {
+        if (state == TurnState.Won || state == TurnState.Lost) return;
+
+        // Bloquea juego (nadie se mueve más)
+        state = TurnState.Busy;
+        RaiseTurnStateChanged();
+
+        if (inputManager) inputManager.enabled = false;
+
+        GoalReached?.Invoke(msg);
+
+        Debug.Log($"Goal reached: {msg}");
+    }
+
 }
 
 [System.Serializable]

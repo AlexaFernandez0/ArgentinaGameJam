@@ -1,46 +1,32 @@
-﻿using TMPro;
+using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public class UILosePanel : MonoBehaviour
+public class UIVictoryPanel : MonoBehaviour
 {
     [Header("UI")]
     public TMP_Text titleText;
     public TMP_Text messageText;
 
-    [Header("Retry")]
-    public bool reloadSceneOnRetry = false;
-
-    private void Awake()
-    {
-        Hide();
-    }
+    private void Awake() => Hide();
 
     public void Show(string message)
     {
-        if (titleText != null) titleText.text = "GAME OVER";
-        if (messageText != null) messageText.text = string.IsNullOrWhiteSpace(message)
-            ? "You lost."
-            : message;
-
+        if (titleText) titleText.text = "VICTORY!";
+        if (messageText) messageText.text = string.IsNullOrWhiteSpace(message) ? "You won!" : message;
         gameObject.SetActive(true);
     }
 
-    public void Hide()
+    public void Hide() => gameObject.SetActive(false);
+
+    public void OnMainMenuPressed()
     {
-        gameObject.SetActive(false);
+        // SceneManager.LoadScene("MainMenu");
     }
 
     public void OnRetryPressed()
     {
         Hide();
-
-        if (reloadSceneOnRetry)
-        {
-            var scene = SceneManager.GetActiveScene();
-            SceneManager.LoadScene(scene.buildIndex);
-            return;
-        }
 
         if (LevelTransitionManager.Instance != null)
         {
