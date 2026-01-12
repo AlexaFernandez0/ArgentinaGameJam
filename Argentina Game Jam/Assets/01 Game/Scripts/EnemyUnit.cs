@@ -32,6 +32,7 @@ public class EnemyUnit : MonoBehaviour
     private EnemyAnimationController _animController;
 
     private bool _isExecutingTurn;
+    private FootstepEmitter footsStepScript;
 
     private void Awake()
     {
@@ -59,6 +60,8 @@ public class EnemyUnit : MonoBehaviour
             DebugLog("WARNING: currentTile not set on Start.");
         else
             SnapToTile(currentTile);
+
+        footsStepScript = GetComponent<FootstepEmitter>();
     }
 
     public void SnapToTile(Tile tile)
@@ -114,7 +117,6 @@ public class EnemyUnit : MonoBehaviour
             yield break;
         }
 
-        // NUEVA REGLA:
         // 0 = no se mueve nunca
         // 1 = 1 paso
         // 2 = 2 pasos
@@ -204,6 +206,7 @@ public class EnemyUnit : MonoBehaviour
                 {
                     DebugLog($"Step {executedSteps + 1}/{stepsThisTurn} -> Moving to {nextStep} (pathLen={pathLen})");
                     yield return _actions.MoveToTileCoroutine(nextTile);
+                    footsStepScript.Step();
                     executedSteps++;
 
                     // mini pausa visual entre pasos si hace 2 pasos

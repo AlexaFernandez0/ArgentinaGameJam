@@ -22,6 +22,13 @@ public class AudioManager : MonoBehaviour
 
     [Header("SFX (one-shot)")]
     public AudioClip clickButton;
+    public AudioClip footstepClip;
+    public AudioClip turnEndClip;
+    public AudioClip invalidActionClip;
+
+    [Header("SFX Settings(one-shot)")]
+    [SerializeField, Range(0.8f, 1.2f)] private float PitchMin = 0.95f;
+    [SerializeField, Range(0.8f, 1.2f)] private float PitchMax = 1.05f;
 
     [Header("SFX (loop)")]
     public AudioClip fireLoopClip;
@@ -213,6 +220,14 @@ public class AudioManager : MonoBehaviour
     {
         if (sfxSourceOneShot == null || clip == null) return;
         sfxSourceOneShot.PlayOneShot(clip, sfxVolume * volumeMultiplier);
+    }
+
+    public void PlaySFXPitchVariability(AudioClip clip, float volumeMultiplier = 1f)
+    {
+        if (sfxSourceOneShot == null || footstepClip == null) return;
+
+        sfxSourceOneShot.pitch = UnityEngine.Random.Range(PitchMin, PitchMax);
+        sfxSourceOneShot.PlayOneShot(clip, sfxSourceOneShot.volume);
     }
 
     public void ApplyVolumes()

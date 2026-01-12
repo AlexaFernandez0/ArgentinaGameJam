@@ -201,7 +201,8 @@ public class GameManager : MonoBehaviour
         Debug.Log("🔵 PLAYER TURN - ENDED");
         Debug.Log("═══════════════════════════════════════");
 
-        // Sistema de tag desactivado - El jugador ya no pierde por ser tocado, solo por calor
+        AudioClip turnEndClip = AudioManager.Instance.turnEndClip;
+        AudioManager.Instance?.PlaySFXPitchVariability(turnEndClip);
 
         StartCoroutine(EnemyTurnRoutine());
     }
@@ -227,7 +228,7 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        yield return new WaitForSeconds(0.15f);
+        yield return new WaitForSeconds(0.01f);
 
         state = TurnState.EnemyTurn;
         RaiseTurnStateChanged();
@@ -246,7 +247,9 @@ public class GameManager : MonoBehaviour
         if (aliveCount == 0)
         {
             Debug.Log("No alive enemies. Returning to player.");
-            yield return new WaitForSeconds(0.2f);
+            yield return new WaitForSeconds(0.05f);
+            AudioClip turnEndClip = AudioManager.Instance.turnEndClip;
+            AudioManager.Instance?.PlaySFXPitchVariability(turnEndClip);
             StartPlayerTurn();
             yield break;
         }
@@ -267,13 +270,10 @@ public class GameManager : MonoBehaviour
 
             yield return enemy.TakeTurnCoroutine();
 
-            yield return new WaitForSeconds(0.15f);
+            yield return new WaitForSeconds(0.01f);
 
             if (state == TurnState.Won || state == TurnState.Lost) yield break;
         }
-
-        Debug.Log($"Enemies processed: {processedCount}");
-        yield return new WaitForSeconds(0.15f);
 
         Debug.Log("════════════════════════════════════════");
         Debug.Log("🔵 RETURNING TURN TO PLAYER");
@@ -521,7 +521,7 @@ public class GameManager : MonoBehaviour
         }
 
         player.GetComponent<PlayerAnimationController>()?.PlayAttack();
-        yield return new WaitForSeconds(0.1f);
+        yield return new WaitForSeconds(0.05f);
 
         enemy.TakeDamage(attackDamage);
 

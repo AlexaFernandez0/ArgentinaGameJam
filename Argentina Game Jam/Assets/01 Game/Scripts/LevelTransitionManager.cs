@@ -10,7 +10,8 @@ public class LevelTransitionManager : MonoBehaviour
     public List<LevelDefinition> levels = new();
 
     [Header("UI")]
-    public UILevelFinishedPanel levelFinishedPanel; // tu panel con Retry/Next
+    public UILevelFinishedPanel levelFinishedPanel;
+    public UIVictoryPanel victoryPanel;
 
     [Header("Refs")]
     public GameManager gameManager;
@@ -211,10 +212,8 @@ public class LevelTransitionManager : MonoBehaviour
 
     private void OnGameWon(string msg)
     {
-        // Aquí muestra el panel final de victoria total (puede ser otro panel distinto)
-        // Por ahora, reutilizo el mismo si quieres:
-        if (levelFinishedPanel != null)
-            levelFinishedPanel.Show("GAME WON!\n" + msg);
+        if (victoryPanel != null)
+            victoryPanel.Show("GAME WON!\n" + msg);
 
         Debug.Log("[LevelTransitionManager] GAME WON: " + msg);
     }

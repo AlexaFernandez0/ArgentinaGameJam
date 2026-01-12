@@ -11,9 +11,14 @@ public class PlayerController : MonoBehaviour
 
     public Tile currentTile { get; private set; }
     private bool _isMoving;
+    private FootstepEmitter footsStepScript;
 
     public bool IsMoving => _isMoving;
 
+    private void Start()
+    {
+        footsStepScript = this.GetComponent<FootstepEmitter>();
+    }
     public void SnapToTile(Tile tile)
     {
         currentTile = tile;
@@ -36,6 +41,13 @@ public class PlayerController : MonoBehaviour
 
         if (!GameManager.Instance.CanEnterTile(target))
         {
+            if (AudioManager.Instance != null)
+            {
+                AudioClip invalidAction = AudioManager.Instance.invalidActionClip;
+                AudioManager.Instance.PlaySFXPitchVariability(invalidAction);
+            }
+
+
             // Mensajes específicos para Burn cap
             if (target.type == TileType.Burn)
                 Debug.Log("No puedes pisar tantas rojas seguidas.");
@@ -47,6 +59,7 @@ public class PlayerController : MonoBehaviour
         }
 
         StartCoroutine(MoveRoutine(target));
+        footsStepScript.Step();
     }
 
     private IEnumerator MoveRoutine(Tile target)

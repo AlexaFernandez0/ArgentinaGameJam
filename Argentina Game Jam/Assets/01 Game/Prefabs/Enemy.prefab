@@ -127,6 +127,7 @@ GameObject:
   - component: {fileID: 8508728889335794781}
   - component: {fileID: 8087155355088968648}
   - component: {fileID: 7152229246495821706}
+  - component: {fileID: 6059672285492977590}
   m_Layer: 8
   m_Name: Enemy
   m_TagString: Untagged
@@ -221,6 +222,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyAnimationController
   animator: {fileID: 2204870899099994533}
+--- !u!114 &6059672285492977590
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8514530121809401585}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 76e9996aa5eee8446bf29bd82f9a739e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FootstepEmitter
+  cooldown: 0.15
 --- !u!1001 &2140760326573470182
 PrefabInstance:
   m_ObjectHideFlags: 0
