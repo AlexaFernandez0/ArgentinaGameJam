@@ -2,7 +2,7 @@
 - Project name: Argentina Game Jam
 - Unity version: Unity 6000.3.2f1
 - Active game object:
-  - Name: Canvas Fondo
+  - Name: Directional Light
   - Tag: Untagged
-  - Layer: UI background
+  - Layer: Default
 <!-- UNITY CODE ASSIST INSTRUCTIONS END -->
