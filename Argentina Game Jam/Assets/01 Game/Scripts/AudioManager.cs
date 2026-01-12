@@ -25,6 +25,7 @@ public class AudioManager : MonoBehaviour
     public AudioClip footstepClip;
     public AudioClip turnEndClip;
     public AudioClip invalidActionClip;
+    public AudioClip pushEnemyClip;
 
     [Header("SFX Settings(one-shot)")]
     [SerializeField, Range(0.8f, 1.2f)] private float PitchMin = 0.95f;

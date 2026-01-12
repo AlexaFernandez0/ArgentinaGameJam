@@ -482,18 +482,21 @@ public class GameManager : MonoBehaviour
     {
         if (!CanAttackEnemyOnTile(targetTile))
         {
-            Debug.Log("Attack not possible.");
             return;
         }
 
         var enemy = GetEnemyOnTile(targetTile);
         if (enemy == null)
         {
-            Debug.Log("No enemy found on target tile.");
             return;
         }
 
-        Debug.Log($"Attacking enemy on tile {targetTile.gridPos}");
+        if (AudioManager.Instance != null)
+        {
+            AudioClip pushEnemyClip = AudioManager.Instance.pushEnemyClip;
+            AudioManager.Instance.PlaySFXPitchVariability(pushEnemyClip);
+        }
+
         StartCoroutine(AttackRoutine(enemy));
     }
 
