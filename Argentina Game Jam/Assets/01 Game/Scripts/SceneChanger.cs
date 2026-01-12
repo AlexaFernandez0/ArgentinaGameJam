@@ -27,6 +27,11 @@ public class SceneChanger : MonoBehaviour
         }
     }
 
+    private void BackToMainMenu()
+    {
+        SceneManager.LoadScene(0);
+    }
+
     // Método para cerrar el juego (útil para botón de salir)
     public void ExitGame()
     {
