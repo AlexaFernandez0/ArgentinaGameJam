@@ -2,7 +2,7 @@
 - Project name: Argentina Game Jam
 - Unity version: Unity 6000.3.2f1
 - Active game object:
-  - Name: LevelRoot_Boss
+  - Name: Canvas
   - Tag: Untagged
-  - Layer: Default
+  - Layer: UI
 <!-- UNITY CODE ASSIST INSTRUCTIONS END -->
