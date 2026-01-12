@@ -1406,6 +1406,7 @@ MonoBehaviour:
   footstepClip: {fileID: 8300000, guid: 4ca4c69273be4bb48bff19df134b53ed, type: 3}
   turnEndClip: {fileID: 8300000, guid: 574750a0361b2d942b8fdc74966dfa3b, type: 3}
   invalidActionClip: {fileID: 8300000, guid: 8d0a38710c68c07408c36be3ffde11d3, type: 3}
+  pushEnemyClip: {fileID: 8300000, guid: 1f272beeb74ed44478f1f128ce49aa02, type: 3}
   PitchMin: 0.95
   PitchMax: 1.05
   fireLoopClip: {fileID: 8300000, guid: e61bf0f64ce7e7147b81936a14c36827, type: 3}
@@ -1570,6 +1571,7 @@ GameObject:
   - component: {fileID: 1331005302}
   - component: {fileID: 1331005301}
   - component: {fileID: 1331005300}
+  - component: {fileID: 1331005304}
   m_Layer: 5
   m_Name: Canvas
   m_TagString: Untagged
@@ -1661,6 +1663,20 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
+--- !u!114 &1331005304
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1331005299}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cc45f16c965d0b54db9d1047e02a2f6a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIButtonClickSfx
+  clickSfx: {fileID: 8300000, guid: c87f9acc2b24783418239cb2291423b9, type: 3}
+  includeInactive: 1
 --- !u!1 &1657323655
 GameObject:
   m_ObjectHideFlags: 0
