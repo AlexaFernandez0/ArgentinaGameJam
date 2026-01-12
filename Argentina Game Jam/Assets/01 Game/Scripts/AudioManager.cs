@@ -7,17 +7,26 @@ public class AudioManager : MonoBehaviour
     public static AudioManager Instance { get; private set; }
 
     [Header("Audio Sources")]
-    [SerializeField] private AudioSource musicSource;   // loops (menu/gameplay)
-    [SerializeField] private AudioSource jingleSource;  // one-time music (level finish / lose)
-    [SerializeField] private AudioSource sfxSource;     // SFX one-shots
+    public AudioSource musicSource;         // loops (menu/gameplay)
+    public AudioSource jingleSource;        // one-time music (level finish / lose)
+    public AudioSource sfxSourceOneShot;    // SFX one-shots
+    public AudioSource sfxSourceLoop;       // SFX loop
 
-    [Header("Music Clips")]
+    [Header("Music Clips (loop)")]
     public AudioClip mainMenuLoop;
     public AudioClip gameplayLoop;
 
     [Header("Jingles (one-shot)")]
     public AudioClip levelFinishedJingle;
     public AudioClip gameLostJingle;
+
+    [Header("SFX (one-shot)")]
+    public AudioClip clickButton;
+
+    [Header("SFX (loop)")]
+    public AudioClip fireLoopClip;
+
+    public AudioSource FireLoopSource => sfxSourceLoop;
 
     [Header("Volumes")]
     [Range(0f, 1f)] public float musicVolume = 0.6f;
@@ -44,6 +53,10 @@ public class AudioManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
 
         ApplyVolumes();
+
+        // Asegurar que el AudioSource tiene el clip asignado
+        if (sfxSourceLoop != null && sfxSourceLoop.clip == null && fireLoopClip != null)
+            sfxSourceLoop.clip = fireLoopClip;
     }
 
     private void OnEnable()
@@ -198,15 +211,15 @@ public class AudioManager : MonoBehaviour
 
     public void PlaySfx(AudioClip clip, float volumeMultiplier = 1f)
     {
-        if (sfxSource == null || clip == null) return;
-        sfxSource.PlayOneShot(clip, sfxVolume * volumeMultiplier);
+        if (sfxSourceOneShot == null || clip == null) return;
+        sfxSourceOneShot.PlayOneShot(clip, sfxVolume * volumeMultiplier);
     }
 
     public void ApplyVolumes()
     {
         if (musicSource != null) musicSource.volume = musicVolume;
         if (jingleSource != null) jingleSource.volume = jingleVolume;
-        if (sfxSource != null) sfxSource.volume = sfxVolume;
+        if (sfxSourceOneShot != null) sfxSourceOneShot.volume = sfxVolume;
     }
 
     // ---------------- EVENTS HOOK ----------------
